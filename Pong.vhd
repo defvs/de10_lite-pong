@@ -5,9 +5,14 @@ library ieee ;
 entity Pong is
   port (
     MAX10_CLK1_50 : in std_logic;
+
     VGA_HS : buffer std_logic;
     VGA_VS : buffer std_logic;
-    
+    VGA_R : buffer integer range 0 to 15;
+    VGA_G : buffer integer range 0 to 15;
+    VGA_B : buffer integer range 0 to 15;
+
+    SW : in std_logic_vector(2 downto 0);
     LEDR : out std_logic_vector(1 downto 0);
     GPIO : out std_logic_vector(1 downto 0)
   ) ;
@@ -20,6 +25,8 @@ architecture work of Pong is
     signal hsync_counter : integer range 0 to 799;
     signal vsync_counter : integer range 0 to 524;
 
+    signal h_video : std_logic;
+    signal v_video : std_logic;
 
 begin
     VGA_Divider : process( clk ) -- 25MHz
@@ -42,6 +49,13 @@ begin
                 when 703 => VGA_HS <= '0';
                 when others =>
             end case ;
+            
+            case( hsync_counter ) is
+                when 44 to 684 =>
+                    h_video <= '1';
+                when others =>
+                    h_video <= '0';
+            end case ;
         end if ;
     end process ; -- VGA_hsync
 
@@ -59,8 +73,44 @@ begin
                 when 522 => VGA_VS <= '0';
                 when others =>
             end case ;
+
+            case( vsync_counter ) is
+                when 30 to 519 =>
+                    v_video <= '1';
+                when others =>
+                    v_video <= '0';
+            end case ;
         end if ;
     end process ; -- VGA_vsync
+
+    VGA_pixel : process( VGA_clk )
+    begin
+        if rising_edge(VGA_clk) then
+            if v_video = '1' and h_video = '1' then
+                if SW(0) = '1' then
+                    VGA_R <= 15;
+                else
+                    VGA_R <= 0;
+                end if ;
+
+                if SW(1) = '1' then
+                    VGA_G <= 15;
+                else
+                    VGA_G <= 0;
+                end if ;
+
+                if SW(2) = '1' then
+                    VGA_B <= 15;
+                else
+                    VGA_B <= 15;
+                end if ;
+            else
+                VGA_R <= 0;
+                VGA_G <= 0;
+                VGA_B <= 0;
+            end if ;
+        end if ;
+    end process ; -- VGA_pixel
 
     LEDR(0) <= VGA_HS;
     LEDR(1) <= VGA_VS;
