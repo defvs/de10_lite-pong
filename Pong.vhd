@@ -41,7 +41,7 @@ begin
 
     VGA_vsync : process( VGA_HS )
     begin
-        if falling_edge(VGA_HS) then
+        if rising_edge(VGA_HS) then
             vsync_counter <= vsync_counter + 1;
             if vsync_counter = 522 then
                 VGA_VS <= '0';
