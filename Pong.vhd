@@ -102,7 +102,7 @@ begin
                 if SW(2) = '1' then
                     VGA_B <= 15;
                 else
-                    VGA_B <= 15;
+                    VGA_B <= 0;
                 end if ;
             else
                 VGA_R <= 0;
