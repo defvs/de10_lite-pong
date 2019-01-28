@@ -26,7 +26,14 @@ architecture work of Pong is
     signal vsync_counter : integer range 0 to 524;
 
     signal h_video : std_logic;
-    signal v_video : std_logic;
+	signal v_video : std_logic;
+	
+	signal VGA_x : integer range 0 to 640;
+	signal VGA_y : integer range 0 to 480;
+	signal pixel : std_logic;
+
+	signal lPalet : integer range 0 to 352 := 0;
+	signal rPalet : integer range 0 to 352 := 0;
 
 begin
     VGA_Divider : process( clk ) -- 25MHz
@@ -52,9 +59,11 @@ begin
             
             case( hsync_counter ) is
                 when 44 to 684 =>
-                    h_video <= '1';
+					h_video <= '1';
+					VGA_x <= hsync_counter - 44;
                 when others =>
-                    h_video <= '0';
+					h_video <= '0';
+					VGA_x <= 0;
             end case ;
         end if ;
     end process ; -- VGA_hsync
@@ -76,9 +85,11 @@ begin
 
             case( vsync_counter ) is
                 when 30 to 519 =>
-                    v_video <= '1';
+					v_video <= '1';
+					VGA_y <= vsync_counter - 30;
                 when others =>
-                    v_video <= '0';
+					v_video <= '0';
+					VGA_y <= 0;
             end case ;
         end if ;
     end process ; -- VGA_vsync
@@ -86,24 +97,33 @@ begin
     VGA_pixel : process( VGA_clk )
     begin
         if rising_edge(VGA_clk) then
-            if v_video = '1' and h_video = '1' then
-                if SW(0) = '1' then
-                    VGA_R <= 15;
-                else
-                    VGA_R <= 0;
-                end if ;
+			if v_video = '1' and h_video = '1' then
+				if pixel = '1' then
+					VGA_R <= 15;
+					VGA_G <= 15;
+					VGA_B <= 15;
+				else
+					VGA_R <= 0;
+					VGA_G <= 0;
+					VGA_B <= 0;
+				end if ;
+                -- if SW(0) = '1' then
+                --     VGA_R <= 15;
+                -- else
+                --     VGA_R <= 0;
+                -- end if ;
 
-                if SW(1) = '1' then
-                    VGA_G <= 15;
-                else
-                    VGA_G <= 0;
-                end if ;
+                -- if SW(1) = '1' then
+                --     VGA_G <= 15;
+                -- else
+                --     VGA_G <= 0;
+                -- end if ;
 
-                if SW(2) = '1' then
-                    VGA_B <= 15;
-                else
-                    VGA_B <= 0;
-                end if ;
+                -- if SW(2) = '1' then
+                --     VGA_B <= 15;
+                -- else
+                --     VGA_B <= 0;
+                -- end if ;
             else
                 VGA_R <= 0;
                 VGA_G <= 0;
@@ -111,6 +131,21 @@ begin
             end if ;
         end if ;
     end process ; -- VGA_pixel
+
+	print_palet : process( VGA_x, VGA_y )
+	begin
+		if (VGA_x <= 16) and (VGA_y >= lPalet) and (VGA_y <= (lPalet + 128)) then -- Palette 1
+			pixel <= '1';
+		else
+			pixel <= '0';
+		end if ;
+
+		if (VGA_x >= 640 - 16) and (VGA_y >= rPalet) and (VGA_y <= (rPalet + 128)) then
+			pixel <= '1';
+		else
+			pixel <= '0';
+		end if ;
+	end process ; -- print_palet
 
     LEDR(0) <= VGA_HS;
     LEDR(1) <= VGA_VS;
