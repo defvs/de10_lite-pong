@@ -6,8 +6,10 @@ entity Pong is
   port (
     MAX10_CLK1_50 : in std_logic;
     VGA_HS : buffer std_logic;
-    VGA_VS : buffer std_logic
+    VGA_VS : buffer std_logic;
     
+    LEDR : out std_logic_vector(1 downto 0);
+    GPIO : out std_logic_vector(1 downto 0)
   ) ;
 end Pong ;
 
@@ -30,27 +32,41 @@ begin
     VGA_hsync : process( VGA_clk )
     begin
         if rising_edge(VGA_clk) then
-            hsync_counter <= hsync_counter + 1;
-            if hsync_counter = 0 then
-                VGA_HS <= '1';
-            elsif hsync_counter = 703 then
-                VGA_HS <= '0';
+            if hsync_counter = 799 then
+                hsync_counter <= 0;
+            else
+                hsync_counter <= hsync_counter + 1;
             end if ;
+            case( hsync_counter ) is
+                when 0 => VGA_HS <= '1';
+                when 703 => VGA_HS <= '0';
+                when others =>
+            end case ;
         end if ;
     end process ; -- VGA_hsync
 
     VGA_vsync : process( VGA_HS )
     begin
         if rising_edge(VGA_HS) then
-            vsync_counter <= vsync_counter + 1;
-            if vsync_counter = 522 then
-                VGA_VS <= '0';
-            elsif vsync_counter = 0 then
-                VGA_VS <= '1';
+            if vsync_counter = 525 then
+                vsync_counter <= 0;
+            else
+                vsync_counter <= vsync_counter + 1;
             end if ;
+
+            case( vsync_counter ) is
+                when 0 => VGA_VS <= '1';
+                when 522 => VGA_VS <= '0';
+                when others =>
+            end case ;
         end if ;
     end process ; -- VGA_vsync
 
+    LEDR(0) <= VGA_HS;
+    LEDR(1) <= VGA_VS;
+
+    GPIO(0) <= VGA_HS;
+    GPIO(1) <= VGA_VS;
 
 
 end architecture ; -- work
