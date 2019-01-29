@@ -12,28 +12,42 @@ entity Pong is
     VGA_G : buffer integer range 0 to 15;
     VGA_B : buffer integer range 0 to 15;
 
-    SW : in std_logic_vector(2 downto 0);
+    SW : in std_logic_vector(9 downto 0);
     LEDR : out std_logic_vector(1 downto 0);
     GPIO : out std_logic_vector(1 downto 0)
   ) ;
 end Pong ;
 
 architecture work of Pong is
-    alias clk is MAX10_CLK1_50;
+    alias clk is MAX10_CLK1_50; -- Alias horlong 50meg
 
-    signal VGA_clk : std_logic;
-    signal hsync_counter : integer range 0 to 799;
-    signal vsync_counter : integer range 0 to 524;
+    signal VGA_clk : std_logic; -- Horloge du fonctionnement VGA environ 25MHz
+    signal hsync_counter : integer range 0 to 799; -- Compteur de synchro horizontale (lignes)
+    signal vsync_counter : integer range 0 to 524; -- Compteur de synchro verticale (frames)
 
-    signal h_video : std_logic;
-	signal v_video : std_logic;
-	
-	signal VGA_x : integer range 0 to 640;
-	signal VGA_y : integer range 0 to 480;
-	signal pixel : std_logic;
+    signal h_video : std_logic; -- Autorise l'affichage (dans la trame)
+	signal v_video : std_logic; -- Pareil
+    
+    -- Position actuelle du curseur dans la trame
+	signal VGA_x : integer range 0 to 639; -- Axe x (colonnes)
+	signal VGA_y : integer range 0 to 479; -- Axe y (lignes)
+	signal pixel : std_logic; -- Si '1', affichera un pixel blanc à l'emplacement du curseur
 
-	signal lPalet : integer range 0 to 352 := 0;
-	signal rPalet : integer range 0 to 352 := 0;
+    -- Position verticale des raquettes
+	signal lPalet : integer range 0 to 352 := 0; -- Raquette gauche
+    signal rPalet : integer range 0 to 352 := 0; -- Droite
+    alias lSW is SW(9); -- Alias pour le controle des raquettes gauche
+    alias rSW is SW(0); -- et droite
+
+    signal gameTick : std_logic; -- Horloge du timing du jeux
+    signal tickCounter : integer range 0 to 12500000; -- Diviseur pour l'horloge du jeu, 20Hz
+
+    type direction is (l_u, l_d, r_u, r_d);
+    -- l = vers la droite // r = vers la gauche // u = vers le haut // d = vers le bas
+    signal ballDir : direction := l_u;
+    -- Position de la balle (point le plus en haut à gauche de celle-ci)
+    signal ball_x : integer range 0 to 639 := 20; -- Position en x (colonnes)
+    signal ball_y : integer range 0 to 479 := 300; -- Position en y (lignes)
 
 begin
     VGA_Divider : process( clk ) -- 25MHz
@@ -43,7 +57,7 @@ begin
         end if ;
     end process ; -- VGA_Divider
 
-    VGA_hsync : process( VGA_clk )
+    VGA_hsync : process( VGA_clk ) -- Synchronisation horizontale par ligne
     begin
         if rising_edge(VGA_clk) then
             if hsync_counter = 799 then
@@ -58,7 +72,7 @@ begin
             end case ;
             
             case( hsync_counter ) is
-                when 44 to 684 =>
+                when 44 to 683 =>
 					h_video <= '1';
 					VGA_x <= hsync_counter - 44;
                 when others =>
@@ -68,7 +82,7 @@ begin
         end if ;
     end process ; -- VGA_hsync
 
-    VGA_vsync : process( VGA_HS )
+    VGA_vsync : process( VGA_HS ) -- Synchronisation verticale par trame
     begin
         if rising_edge(VGA_HS) then
             if vsync_counter = 525 then
@@ -84,7 +98,7 @@ begin
             end case ;
 
             case( vsync_counter ) is
-                when 30 to 519 =>
+                when 30 to 518 =>
 					v_video <= '1';
 					VGA_y <= vsync_counter - 30;
                 when others =>
@@ -94,7 +108,7 @@ begin
         end if ;
     end process ; -- VGA_vsync
 
-    VGA_pixel : process( VGA_clk )
+    VGA_pixel : process( VGA_clk ) -- Change les valeurs de couleurs
     begin
         if rising_edge(VGA_clk) then
 			if v_video = '1' and h_video = '1' then
@@ -107,23 +121,6 @@ begin
 					VGA_G <= 0;
 					VGA_B <= 0;
 				end if ;
-                -- if SW(0) = '1' then
-                --     VGA_R <= 15;
-                -- else
-                --     VGA_R <= 0;
-                -- end if ;
-
-                -- if SW(1) = '1' then
-                --     VGA_G <= 15;
-                -- else
-                --     VGA_G <= 0;
-                -- end if ;
-
-                -- if SW(2) = '1' then
-                --     VGA_B <= 15;
-                -- else
-                --     VGA_B <= 0;
-                -- end if ;
             else
                 VGA_R <= 0;
                 VGA_G <= 0;
@@ -132,26 +129,112 @@ begin
         end if ;
     end process ; -- VGA_pixel
 
-	print_palet : process( VGA_x, VGA_y )
+	pixel_print : process( VGA_x, VGA_y ) -- Choisis d'afficher un pixel ou non
 	begin
-		if (VGA_x <= 16) and (VGA_y >= lPalet) and (VGA_y <= (lPalet + 128)) then -- Palette 1
-			pixel <= '1';
-		else
-			pixel <= '0';
+		if (VGA_x <= 16) and (VGA_y >= lPalet) and (VGA_y <= (lPalet + 128)) then -- Raquette 1
+            pixel <= '1';
+        elsif (VGA_x >= 639 - 16) and (VGA_y >= rPalet) and (VGA_y <= (rPalet + 128)) then -- Raquette 2
+            pixel <= '1';
+        elsif ((VGA_x >= ball_x) and (VGA_x <= (ball_x + 16)))
+                and 
+            ((VGA_y >= ball_y) and (VGA_y <= (ball_y + 16))) -- Balle
+        then
+            pixel <= '1';
+        else
+            pixel <= '0';
 		end if ;
+    end process ; -- pixel_print
+    
+    tick_div : process( clk ) -- Diviseur pour l'horloge du jeu
+    begin
+        if rising_edge(clk) then
+            if tickCounter = 12500000 then
+                tickCounter <= 0;
+                gameTick <= not gameTick;
+            else
+                tickCounter <= tickCounter + 1;
+            end if ;
+        end if ;
+    end process ; -- tick_div
 
-		if (VGA_x >= 640 - 16) and (VGA_y >= rPalet) and (VGA_y <= (rPalet + 128)) then
-			pixel <= '1';
-		else
-			pixel <= '0';
-		end if ;
-	end process ; -- print_palet
+    palet_movement : process( gameTick ) -- Mouvement des raquettes
+    begin
+        if rising_edge(gameTick) then
+            if lSW = '1' then
+                if lPalet > 0 then
+                    lPalet <= lPalet - 1;
+                end if ;
+            else
+                if lPalet < (480 - 128) then
+                    lPalet <= lPalet + 1;
+                end if ;
+            end if ;
 
+            if rSW = '1' then
+                if rPalet > 0 then
+                    rPalet <= rPalet - 1;
+                end if ;
+            else
+                if rPalet < (480 - 128) then
+                    rPalet <= rPalet + 1;
+                end if ;
+            end if ;
+        end if ;
+    end process ; -- palet_movement
+
+    ball_movement : process( gameTick ) -- Mouvement de la balle
+    begin
+        if rising_edge(gameTick) then
+            if (ballDir = l_u) or (ballDir = l_d) then
+                ball_x <= ball_x - 1;
+                if ball_x = 17 then
+                    case( ballDir ) is
+                        when l_d => ballDir <= r_d;
+                        when l_u => ballDir <= r_u;
+                        when others => ballDir <= r_u;
+                    end case ;
+                end if ;
+            end if ;
+            if (ballDir = r_u) or (ballDir = r_d) then
+                ball_x <= ball_x + 1;
+                if ball_x = (480 - 17 - 16) then
+                    case( ballDir ) is
+                        when r_d => ballDir <= l_d;
+                        when r_u => ballDir <= l_u;
+                        when others => ballDir <= l_u;
+                    end case ;
+                end if ;
+            end if ;
+            if (ballDir = l_u) or (ballDir = r_u) then
+                ball_y <= ball_y - 1;
+                if ball_y = 0 then
+                    case( ballDir ) is
+                        when l_u => ballDir <= l_d;
+                        when r_u => ballDir <= r_d;
+                        when others => ballDir <= r_d;
+                    end case ;
+                end if ;
+            end if ;
+            if (ballDir = l_d) or (ballDir = r_d) then
+                ball_y <= ball_y + 1;
+                if ball_y = 480 - 16 then
+                    case( ballDir ) is
+                        when r_d => ballDir <= r_u;
+                        when l_d => ballDir <= l_u;
+                        when others => ballDir <= l_u;
+                    end case ;
+                end if ;
+            end if ;
+        end if ;
+    end process ; -- ball_movement
+
+    -- Debug Signaux
     LEDR(0) <= VGA_HS;
     LEDR(1) <= VGA_VS;
 
     GPIO(0) <= VGA_HS;
     GPIO(1) <= VGA_VS;
+    -- end Debug
 
 
 end architecture ; -- work
