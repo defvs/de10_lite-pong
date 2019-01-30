@@ -40,7 +40,7 @@ architecture work of Pong is
     alias rSW is SW(0); -- et droite
 
     signal gameTick : std_logic; -- Horloge du timing du jeux
-    signal tickCounter : integer range 0 to 12500000; -- Diviseur pour l'horloge du jeu, 20Hz
+    signal tickCounter : integer range 0 to 250000; -- Diviseur pour l'horloge du jeu, 20Hz
 
     type direction is (l_u, l_d, r_u, r_d);
     -- l = vers la droite // r = vers la gauche // u = vers le haut // d = vers le bas
@@ -148,7 +148,7 @@ begin
     tick_div : process( clk ) -- Diviseur pour l'horloge du jeu
     begin
         if rising_edge(clk) then
-            if tickCounter = 12500000 then
+            if tickCounter = 250000 then
                 tickCounter <= 0;
                 gameTick <= not gameTick;
             else
