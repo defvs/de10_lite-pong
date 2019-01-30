@@ -47,15 +47,16 @@ architecture work of Pong is
 
     type direction is (l_u, l_d, r_u, r_d);
     -- l = vers la droite // r = vers la gauche // u = vers le haut // d = vers le bas
-    signal ballDir : direction := l_u;
+    signal ballDir : direction := r_u;
     -- Position de la balle (point le plus en haut à gauche de celle-ci)
     signal ball_x : integer range 0 to 639 := 20; -- Position en x (colonnes)
     signal ball_y : integer range 0 to 479 := 300; -- Position en y (lignes)
 
-    signal lScore : integer range 0 to 10;
-    signal rScore : integer range 0 to 10;
+    signal lScore : integer range 0 to 10 := 0;
+    signal rScore : integer range 0 to 10 := 0;
     -- signal pause : std_logic := '0';
 
+    signal currentSpeed : integer range 0 to 250000 := 250000;
 begin
     VGA_Divider : process( clk ) -- 25MHz
     begin
@@ -155,7 +156,7 @@ begin
     tick_div : process( clk ) -- Diviseur pour l'horloge du jeu
     begin
         if rising_edge(clk) then
-            if tickCounter = 250000 then
+            if tickCounter = currentSpeed then
                 tickCounter <= 0;
                 gameTick <= not gameTick;
             else
@@ -199,7 +200,8 @@ begin
                         when l_d => ballDir <= r_d;
                         when l_u => ballDir <= r_u;
                         when others => ballDir <= r_u;
-                    end case ;
+                    end case;
+                    currentSpeed <= currentSpeed - 5000;
                 end if ;
             end if ;
             if (ballDir = r_u) or (ballDir = r_d) then
@@ -210,6 +212,7 @@ begin
                         when r_u => ballDir <= l_u;
                         when others => ballDir <= l_u;
                     end case ;
+                    currentSpeed <= currentSpeed - 5000;
                 end if ;
             end if ;
             if (ballDir = l_u) or (ballDir = r_u) then
@@ -220,6 +223,7 @@ begin
                         when r_u => ballDir <= r_d;
                         when others => ballDir <= r_d;
                     end case ;
+                    currentSpeed <= currentSpeed - 5000;
                 end if ;
             end if ;
             if (ballDir = l_d) or (ballDir = r_d) then
@@ -230,6 +234,9 @@ begin
                         when l_d => ballDir <= l_u;
                         when others => ballDir <= l_u;
                     end case ;
+                    if currentSpeed >= 5000 then
+                        currentSpeed <= currentSpeed - 5000;
+                    end if ;
                 end if ;
             end if ;
             if ball_x = 0 then
@@ -237,19 +244,17 @@ begin
                 ball_x <= 20;
                 ball_y <= 300;
                 rScore <= rScore + 1;
+                currentSpeed <= 250000;
             end if ;
             if ball_x = (639 - 16) then
                 ballDir <= l_u;
                 ball_x <= 619;
                 ball_y <= 300;
                 lScore <= lScore + 1;
+                currentSpeed <= 250000;
             end if ;
         end if ;
     end process ; -- ball_movement
-
-    -- game_end : process( ball_x )
-    -- begin
-    -- end process ; -- game_end
 
     score_print : process( lScore, rScore )
     begin
@@ -277,7 +282,6 @@ begin
             when 10 =>
                 HEX5 <= not "1100010";
                 HEX0 <= not "0001000";
-                -- pause <= '1';
         end case ;
         case( rScore ) is
             when 0 =>
@@ -303,7 +307,6 @@ begin
             when 10 =>
                 HEX0 <= not "1100010";
                 HEX5 <= not "0001000";
-                -- pause <= '1';
         end case ;
     end process ; -- score_print
 
