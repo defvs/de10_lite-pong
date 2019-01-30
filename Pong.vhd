@@ -14,6 +14,8 @@ entity Pong is
 
     SW : in std_logic_vector(9 downto 0);
     HEX5 : out std_logic_vector(0 to 6);
+    HEX4 : out std_logic_vector(0 to 6);
+    HEX1 : out std_logic_vector(0 to 6);
     HEX0 : out std_logic_vector(0 to 6)
   ) ;
 end Pong ;
@@ -276,6 +278,8 @@ begin
                 HEX5 <= not "1111110";
             when 1 =>
                 HEX5 <= not "0110000";
+                HEX1 <= not "0000000";
+                HEX4 <= not "0000000";
             when 2 =>
                 HEX5 <= not "1101101";
             when 3 =>
@@ -293,14 +297,16 @@ begin
             when 9 =>
                 HEX5 <= not "1111011";
             when 10 =>
-                HEX5 <= not "1100010";
-                HEX0 <= not "0001000";
+                HEX4 <= not "1100010";
+                HEX1 <= not "0001000";
         end case ;
         case( rScore ) is
             when 0 =>
                 HEX0 <= not "1111110";
             when 1 =>
                 HEX0 <= not "0110000";
+                HEX1 <= not "0000000";
+                HEX4 <= not "0000000";
             when 2 =>
                 HEX0 <= not "1101101";
             when 3 =>
@@ -318,8 +324,8 @@ begin
             when 9 =>
                 HEX0 <= not "1111011";
             when 10 =>
-                HEX0 <= not "1100010";
-                HEX5 <= not "0001000";
+                HEX1 <= not "1100010";
+                HEX4 <= not "0001000";
         end case ;
     end process ; -- score_print
 
