@@ -14,10 +14,7 @@ entity Pong is
 
     SW : in std_logic_vector(9 downto 0);
     HEX5 : out std_logic_vector(0 to 6);
-    HEX0 : out std_logic_vector(0 to 6);
-
-    LEDR : out std_logic_vector(1 downto 0);
-    GPIO : out std_logic_vector(1 downto 0)
+    HEX0 : out std_logic_vector(0 to 6)
   ) ;
 end Pong ;
 
@@ -309,14 +306,6 @@ begin
                 HEX5 <= not "0001000";
         end case ;
     end process ; -- score_print
-
-    -- Debug Signaux
-    LEDR(0) <= VGA_HS;
-    LEDR(1) <= VGA_VS;
-
-    GPIO(0) <= VGA_HS;
-    GPIO(1) <= VGA_VS;
-    -- end Debug
 
 
 end architecture ; -- work
