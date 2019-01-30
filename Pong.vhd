@@ -38,6 +38,7 @@ architecture work of Pong is
     signal rPalet : integer range 0 to 352 := 0; -- Droite
     alias lSW is SW(9); -- Alias pour le controle des raquettes gauche
     alias rSW is SW(0); -- et droite
+    alias pause is SW(5);
 
     signal gameTick : std_logic; -- Horloge du timing du jeux
     signal tickCounter : integer range 0 to 250000; -- Diviseur pour l'horloge du jeu, 100Hz
@@ -54,6 +55,9 @@ architecture work of Pong is
     -- signal pause : std_logic := '0';
 
     signal currentSpeed : integer range 0 to 250000 := 250000;
+
+    signal gameStart : std_logic;
+
 begin
     VGA_Divider : process( clk ) -- 25MHz
     begin
@@ -152,7 +156,7 @@ begin
     
     tick_div : process( clk ) -- Diviseur pour l'horloge du jeu
     begin
-        if rising_edge(clk) then
+        if rising_edge(clk) and pause = '0' then
             if tickCounter = currentSpeed then
                 tickCounter <= 0;
                 gameTick <= not gameTick;
@@ -190,65 +194,77 @@ begin
     ball_movement : process( gameTick ) -- Mouvement de la balle
     begin
         if rising_edge(gameTick) then
-            if (ballDir = l_u) or (ballDir = l_d) then
-                ball_x <= ball_x - 1;
-                if ball_x <= 17 and (ball_y <= (lPalet + 128) and ball_y >= lPalet) then
-                    case( ballDir ) is
-                        when l_d => ballDir <= r_d;
-                        when l_u => ballDir <= r_u;
-                        when others => ballDir <= r_u;
-                    end case;
-                    currentSpeed <= currentSpeed - 5000;
-                end if ;
-            end if ;
-            if (ballDir = r_u) or (ballDir = r_d) then
-                ball_x <= ball_x + 1;
-                if (ball_x = (639 - 17 - 16)) and (ball_y <= (rPalet + 128) and ball_y >= rPalet) then
-                    case( ballDir ) is
-                        when r_d => ballDir <= l_d;
-                        when r_u => ballDir <= l_u;
-                        when others => ballDir <= l_u;
-                    end case ;
-                    currentSpeed <= currentSpeed - 5000;
-                end if ;
-            end if ;
-            if (ballDir = l_u) or (ballDir = r_u) then
-                ball_y <= ball_y - 1;
-                if ball_y = 0 then
-                    case( ballDir ) is
-                        when l_u => ballDir <= l_d;
-                        when r_u => ballDir <= r_d;
-                        when others => ballDir <= r_d;
-                    end case ;
-                    currentSpeed <= currentSpeed - 5000;
-                end if ;
-            end if ;
-            if (ballDir = l_d) or (ballDir = r_d) then
-                ball_y <= ball_y + 1;
-                if ball_y = 480 - 16 then
-                    case( ballDir ) is
-                        when r_d => ballDir <= r_u;
-                        when l_d => ballDir <= l_u;
-                        when others => ballDir <= l_u;
-                    end case ;
-                    if currentSpeed >= 5000 then
+            if gameStart = '1' then
+                if (ballDir = l_u) or (ballDir = l_d) then
+                    ball_x <= ball_x - 1;
+                    if ball_x <= 17 and (ball_y <= (lPalet + 128) and ball_y >= lPalet) then
+                        case( ballDir ) is
+                            when l_d => ballDir <= r_d;
+                            when l_u => ballDir <= r_u;
+                            when others => ballDir <= r_u;
+                        end case;
                         currentSpeed <= currentSpeed - 5000;
                     end if ;
                 end if ;
-            end if ;
-            if ball_x = 0 then
+                if (ballDir = r_u) or (ballDir = r_d) then
+                    ball_x <= ball_x + 1;
+                    if (ball_x = (639 - 17 - 16)) and (ball_y <= (rPalet + 128) and ball_y >= rPalet) then
+                        case( ballDir ) is
+                            when r_d => ballDir <= l_d;
+                            when r_u => ballDir <= l_u;
+                            when others => ballDir <= l_u;
+                        end case ;
+                        currentSpeed <= currentSpeed - 5000;
+                    end if ;
+                end if ;
+                if (ballDir = l_u) or (ballDir = r_u) then
+                    ball_y <= ball_y - 1;
+                    if ball_y = 0 then
+                        case( ballDir ) is
+                            when l_u => ballDir <= l_d;
+                            when r_u => ballDir <= r_d;
+                            when others => ballDir <= r_d;
+                        end case ;
+                        currentSpeed <= currentSpeed - 5000;
+                    end if ;
+                end if ;
+                if (ballDir = l_d) or (ballDir = r_d) then
+                    ball_y <= ball_y + 1;
+                    if ball_y = 480 - 16 then
+                        case( ballDir ) is
+                            when r_d => ballDir <= r_u;
+                            when l_d => ballDir <= l_u;
+                            when others => ballDir <= l_u;
+                        end case ;
+                        if currentSpeed >= 5000 then
+                            currentSpeed <= currentSpeed - 5000;
+                        end if ;
+                    end if ;
+                end if ;
+                if ball_x = 0 then
+                    ballDir <= r_u;
+                    ball_x <= 20;
+                    ball_y <= 300;
+                    rScore <= rScore + 1;
+                    currentSpeed <= 250000;
+                end if ;
+                if ball_x = (639 - 16) then
+                    ballDir <= l_u;
+                    ball_x <= 619;
+                    ball_y <= 300;
+                    lScore <= lScore + 1;
+                    currentSpeed <= 250000;
+                end if ;
+                if lScore = 10 or rScore = 10 then
+                    gameStart <= '0';
+                end if ;
+            else
                 ballDir <= r_u;
                 ball_x <= 20;
                 ball_y <= 300;
-                rScore <= rScore + 1;
-                currentSpeed <= 250000;
-            end if ;
-            if ball_x = (639 - 16) then
-                ballDir <= l_u;
-                ball_x <= 619;
-                ball_y <= 300;
-                lScore <= lScore + 1;
-                currentSpeed <= 250000;
+                lScore <= 0;
+                rScore <= 0;
+                gameStart <= '1';
             end if ;
         end if ;
     end process ; -- ball_movement
