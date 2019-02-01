@@ -20,17 +20,11 @@ entity Pong is
   ) ;
 end Pong ;
 
-architecture work of Pong is
+architecture description of Pong is
     alias clk is MAX10_CLK1_50; -- Alias horlong 50meg
 
     signal VGA_clk : std_logic; -- Horloge du fonctionnement VGA environ 25MHz
-    signal hsync_counter : integer range 0 to 799; -- Compteur de synchro horizontale (lignes)
-    signal vsync_counter : integer range 0 to 524; -- Compteur de synchro verticale (frames)
 
-    signal h_video : std_logic; -- Autorise l'affichage (dans la trame)
-	signal v_video : std_logic; -- Pareil
-    
-    -- Position actuelle du curseur dans la trame
 	signal VGA_x : integer range 0 to 639; -- Axe x (colonnes)
 	signal VGA_y : integer range 0 to 479; -- Axe y (lignes)
 	signal pixel : std_logic; -- Si '1', affichera un pixel blanc à l'emplacement du curseur
@@ -66,78 +60,19 @@ begin
             VGA_clk <= not VGA_clk;
         end if ;
     end process ; -- VGA_Divider
-
-    VGA_hsync : process( VGA_clk ) -- Synchronisation horizontale par ligne
-    begin
-        if rising_edge(VGA_clk) then
-            if hsync_counter = 799 then
-                hsync_counter <= 0;
-            else
-                hsync_counter <= hsync_counter + 1;
-            end if ;
-            case( hsync_counter ) is
-                when 0 => VGA_HS <= '1';
-                when 703 => VGA_HS <= '0';
-                when others =>
-            end case ;
-            
-            case( hsync_counter ) is
-                when 44 to 683 => -- Dans la zone d'affichage
-					h_video <= '1';
-					VGA_x <= hsync_counter - 44;
-                when others => -- Hors de la zone
-					h_video <= '0';
-					VGA_x <= 0;
-            end case ;
-        end if ;
-    end process ; -- VGA_hsync
-
-    VGA_vsync : process( VGA_HS ) -- Synchronisation verticale par trame
-    begin
-        if rising_edge(VGA_HS) then
-            if vsync_counter = 525 then
-                vsync_counter <= 0;
-            else
-                vsync_counter <= vsync_counter + 1;
-            end if ;
-
-            case( vsync_counter ) is
-                when 0 => VGA_VS <= '1';
-                when 522 => VGA_VS <= '0';
-                when others =>
-            end case ;
-
-            case( vsync_counter ) is
-                when 30 to 518 => -- Dans la zone d'affichage
-					v_video <= '1';
-					VGA_y <= vsync_counter - 30;
-                when others => -- Hors de la zone
-					v_video <= '0';
-					VGA_y <= 0;
-            end case ;
-        end if ;
-    end process ; -- VGA_vsync
-
-    VGA_pixel : process( VGA_clk ) -- Change les valeurs de couleurs
-    begin
-        if rising_edge(VGA_clk) then
-			if v_video = '1' and h_video = '1' then
-				if pixel = '1' then -- Afficher du blanc
-					VGA_R <= 15;
-					VGA_G <= 15;
-					VGA_B <= 15;
-				else -- Afficher du noir
-					VGA_R <= 0;
-					VGA_G <= 0;
-					VGA_B <= 0;
-				end if ;
-            else -- Ne rien afficher
-                VGA_R <= 0;
-                VGA_G <= 0;
-                VGA_B <= 0;
-            end if ;
-        end if ;
-    end process ; -- VGA_pixel
+    
+    VGA_Sub : entity work.VGA port map( -- Entitée contrôle écran VGA
+            clk => VGA_clk, -- Horloge VGA
+            HS => VGA_HS, -- Signal synchro horizontal
+            VS => VGA_VS, -- Signal synchro verticale
+            R_out => VGA_R, -- Signal rouge sortie
+            G_out => VGA_G, -- Signal vert sortie
+            B_out => VGA_B, -- Signal bleu sortie
+            x => VGA_x, -- Coordonnées X actuelles
+            y => VGA_y, -- Coordonnées Y actuelles
+            RGB_in => to_unsigned(16#000#, 12),
+            pixel => pixel -- Signal forcé couleur blanche
+    );
 
 	pixel_print : process( VGA_x, VGA_y ) -- Choisis d'afficher un pixel ou non
 	begin
@@ -204,7 +139,9 @@ begin
                             when l_u => ballDir <= r_u;
                             when others => ballDir <= r_u;
                         end case;
-                        currentSpeed <= currentSpeed - 5000;
+                        if currentSpeed >= 5000 then
+                            currentSpeed <= currentSpeed - 5000;
+                        end if ;
                     end if ;
                 end if ;
                 if (ballDir = r_u) or (ballDir = r_d) then -- Direction vers la droite
@@ -215,7 +152,9 @@ begin
                             when r_u => ballDir <= l_u;
                             when others => ballDir <= l_u;
                         end case ;
-                        currentSpeed <= currentSpeed - 5000;
+                        if currentSpeed >= 5000 then
+                            currentSpeed <= currentSpeed - 5000;
+                        end if ;
                     end if ;
                 end if ;
                 if (ballDir = l_u) or (ballDir = r_u) then -- Direction vers le haut
@@ -226,7 +165,6 @@ begin
                             when r_u => ballDir <= r_d;
                             when others => ballDir <= r_d;
                         end case ;
-                        currentSpeed <= currentSpeed - 5000;
                     end if ;
                 end if ;
                 if (ballDir = l_d) or (ballDir = r_d) then -- Direction vers le bas
@@ -237,9 +175,6 @@ begin
                             when l_d => ballDir <= l_u;
                             when others => ballDir <= l_u;
                         end case ;
-                        if currentSpeed >= 5000 then
-                            currentSpeed <= currentSpeed - 5000;
-                        end if ;
                     end if ;
                 end if ;
                 if ball_x = 0 then -- Si la balle arrive derrière la raquette gauche
@@ -270,63 +205,36 @@ begin
         end if ;
     end process ; -- ball_movement
 
+    seg7_sub : entity work.seg7 port map( -- Entitée afficheur 7 segments
+        rScore, -- Score droite mappé sur seg0
+        0, 0, 0, 0, -- Pas interessé par les autres afficheurs
+        lScore, -- Score gauche mappé sur seg5
+        HEX0, -- Sortie sur afficheur de droite
+        open, open, open, open, -- Pas interessé
+        HEX5 -- Sortie sur afficheur de gauche
+    );
+
     score_print : process( lScore, rScore ) -- Afficheur du score sur les 7seg
     begin
         case( lScore ) is -- Score gauche
-            when others =>
-            when 0 =>
-                HEX5 <= not "1111110";
-            when 1 =>
-                HEX5 <= not "0110000";
-                HEX1 <= not "0000000";
-                HEX4 <= not "0000000";
-            when 2 =>
-                HEX5 <= not "1101101";
-            when 3 =>
-                HEX5 <= not "1111001";
-            when 4 =>
-                HEX5 <= not "0110011";
-            when 5 =>
-                HEX5 <= not "1011011";
-            when 6 =>
-                HEX5 <= not "1011111";
-            when 7 =>
-                HEX5 <= not "1110000";
-            when 8 =>
-                HEX5 <= (others => '0');
-            when 9 =>
-                HEX5 <= not "1111011";
+            when 1 to 9 =>
+                HEX1 <= (others => '1');
+                HEX4 <= (others => '1');
             when 10 =>
                 HEX4 <= not "1100010";
                 HEX1 <= not "0001000";
+            when 0 =>
+                null;
         end case ;
         case( rScore ) is -- Score droit
-            when others =>
-            when 0 =>
-                HEX0 <= not "1111110";
-            when 1 =>
-                HEX0 <= not "0110000";
-                HEX1 <= not "0000000";
-                HEX4 <= not "0000000";
-            when 2 =>
-                HEX0 <= not "1101101";
-            when 3 =>
-                HEX0 <= not "1111001";
-            when 4 =>
-                HEX0 <= not "0110011";
-            when 5 =>
-                HEX0 <= not "1011011";
-            when 6 =>
-                HEX0 <= not "1011111";
-            when 7 =>
-                HEX0 <= not "1110000";
-            when 8 =>
-                HEX0 <= (others => '0');
-            when 9 =>
-                HEX0 <= not "1111011";
+            when 1 to 9 =>
+                HEX1 <= (others => '1');
+                HEX4 <= (others => '1');
             when 10 =>
                 HEX1 <= not "1100010";
                 HEX4 <= not "0001000";
+            when 0 =>
+                null;
         end case ;
     end process ; -- score_print
 
