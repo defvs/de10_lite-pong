@@ -52,16 +52,15 @@ architecture work of Pong is
     signal ball_x : integer range 0 to 639 := 20; -- Position en x (colonnes)
     signal ball_y : integer range 0 to 479 := 300; -- Position en y (lignes)
 
-    signal lScore : integer range 0 to 10 := 0;
-    signal rScore : integer range 0 to 10 := 0;
-    -- signal pause : std_logic := '0';
+    signal lScore : integer range 0 to 10 := 0; -- Score du joueur gauche
+    signal rScore : integer range 0 to 10 := 0; -- Score du joueur droit
 
-    signal currentSpeed : integer range 0 to 250000 := 250000;
+    signal currentSpeed : integer range 0 to 250000 := 250000; -- Vitesse actuelle du jeu; accelère avec le temps si personne ne marque
 
-    signal gameStart : std_logic;
+    signal gameStart : std_logic; -- Reset du jeu
 
 begin
-    VGA_Divider : process( clk ) -- 25MHz
+    VGA_Divider : process( clk ) -- 25MHz pour le VGA
     begin
         if rising_edge(clk) then
             VGA_clk <= not VGA_clk;
@@ -83,10 +82,10 @@ begin
             end case ;
             
             case( hsync_counter ) is
-                when 44 to 683 =>
+                when 44 to 683 => -- Dans la zone d'affichage
 					h_video <= '1';
 					VGA_x <= hsync_counter - 44;
-                when others =>
+                when others => -- Hors de la zone
 					h_video <= '0';
 					VGA_x <= 0;
             end case ;
@@ -109,10 +108,10 @@ begin
             end case ;
 
             case( vsync_counter ) is
-                when 30 to 518 =>
+                when 30 to 518 => -- Dans la zone d'affichage
 					v_video <= '1';
 					VGA_y <= vsync_counter - 30;
-                when others =>
+                when others => -- Hors de la zone
 					v_video <= '0';
 					VGA_y <= 0;
             end case ;
@@ -123,16 +122,16 @@ begin
     begin
         if rising_edge(VGA_clk) then
 			if v_video = '1' and h_video = '1' then
-				if pixel = '1' then
+				if pixel = '1' then -- Afficher du blanc
 					VGA_R <= 15;
 					VGA_G <= 15;
 					VGA_B <= 15;
-				else
+				else -- Afficher du noir
 					VGA_R <= 0;
 					VGA_G <= 0;
 					VGA_B <= 0;
 				end if ;
-            else
+            else -- Ne rien afficher
                 VGA_R <= 0;
                 VGA_G <= 0;
                 VGA_B <= 0;
@@ -171,7 +170,7 @@ begin
     palet_movement : process( gameTick ) -- Mouvement des raquettes
     begin
         if rising_edge(gameTick) then
-            if lSW = '1' then
+            if lSW = '1' then -- Raquette gauche
                 if lPalet > 0 then
                     lPalet <= lPalet - 1;
                 end if ;
@@ -181,7 +180,7 @@ begin
                 end if ;
             end if ;
 
-            if rSW = '1' then
+            if rSW = '1' then -- Raquette droite
                 if rPalet > 0 then
                     rPalet <= rPalet - 1;
                 end if ;
@@ -197,9 +196,9 @@ begin
     begin
         if rising_edge(gameTick) then
             if gameStart = '1' then
-                if (ballDir = l_u) or (ballDir = l_d) then
+                if (ballDir = l_u) or (ballDir = l_d) then -- Direction vers la gauche
                     ball_x <= ball_x - 1;
-                    if ball_x <= 17 and (ball_y <= (lPalet + 128) and ball_y >= lPalet) then
+                    if ball_x <= 17 and (ball_y <= (lPalet + 128) and ball_y >= lPalet) then -- Touche la raquette
                         case( ballDir ) is
                             when l_d => ballDir <= r_d;
                             when l_u => ballDir <= r_u;
@@ -208,9 +207,9 @@ begin
                         currentSpeed <= currentSpeed - 5000;
                     end if ;
                 end if ;
-                if (ballDir = r_u) or (ballDir = r_d) then
+                if (ballDir = r_u) or (ballDir = r_d) then -- Direction vers la droite
                     ball_x <= ball_x + 1;
-                    if (ball_x = (639 - 17 - 16)) and (ball_y <= (rPalet + 128) and ball_y >= rPalet) then
+                    if (ball_x = (639 - 17 - 16)) and (ball_y <= (rPalet + 128) and ball_y >= rPalet) then -- Touche la raquette
                         case( ballDir ) is
                             when r_d => ballDir <= l_d;
                             when r_u => ballDir <= l_u;
@@ -219,7 +218,7 @@ begin
                         currentSpeed <= currentSpeed - 5000;
                     end if ;
                 end if ;
-                if (ballDir = l_u) or (ballDir = r_u) then
+                if (ballDir = l_u) or (ballDir = r_u) then -- Direction vers le haut
                     ball_y <= ball_y - 1;
                     if ball_y = 0 then
                         case( ballDir ) is
@@ -230,7 +229,7 @@ begin
                         currentSpeed <= currentSpeed - 5000;
                     end if ;
                 end if ;
-                if (ballDir = l_d) or (ballDir = r_d) then
+                if (ballDir = l_d) or (ballDir = r_d) then -- Direction vers le bas
                     ball_y <= ball_y + 1;
                     if ball_y = 480 - 16 then
                         case( ballDir ) is
@@ -243,25 +242,25 @@ begin
                         end if ;
                     end if ;
                 end if ;
-                if ball_x = 0 then
+                if ball_x = 0 then -- Si la balle arrive derrière la raquette gauche
                     ballDir <= r_u;
                     ball_x <= 20;
                     ball_y <= 300;
                     rScore <= rScore + 1;
                     currentSpeed <= 250000;
                 end if ;
-                if ball_x = (639 - 16) then
+                if ball_x = (639 - 16) then -- Si la balle arrive derrière la raquette droite
                     ballDir <= l_u;
                     ball_x <= 619;
                     ball_y <= 300;
                     lScore <= lScore + 1;
                     currentSpeed <= 250000;
                 end if ;
-                if lScore = 10 or rScore = 10 then
+                if lScore = 10 or rScore = 10 then -- Si un des deux scores arrive à 10
                     gameStart <= '0';
                 end if ;
-            else
-                ballDir <= r_u;
+            else -- Reset de la partie (balle, score)
+                ballDir <= r_u; 
                 ball_x <= 20;
                 ball_y <= 300;
                 lScore <= 0;
@@ -271,9 +270,10 @@ begin
         end if ;
     end process ; -- ball_movement
 
-    score_print : process( lScore, rScore )
+    score_print : process( lScore, rScore ) -- Afficheur du score sur les 7seg
     begin
-        case( lScore ) is
+        case( lScore ) is -- Score gauche
+            when others =>
             when 0 =>
                 HEX5 <= not "1111110";
             when 1 =>
@@ -300,7 +300,8 @@ begin
                 HEX4 <= not "1100010";
                 HEX1 <= not "0001000";
         end case ;
-        case( rScore ) is
+        case( rScore ) is -- Score droit
+            when others =>
             when 0 =>
                 HEX0 <= not "1111110";
             when 1 =>
