@@ -3,21 +3,22 @@ library ieee ;
 	use ieee.numeric_std.all;
 
 entity Pong is
-  port (
-    MAX10_CLK1_50 : in std_logic;
+  
+    port (
+        MAX10_CLK1_50 : in std_logic;
 
-    VGA_HS : buffer std_logic;
-    VGA_VS : buffer std_logic;
-    VGA_R : buffer integer range 0 to 15;
-    VGA_G : buffer integer range 0 to 15;
-    VGA_B : buffer integer range 0 to 15;
+        VGA_HS : buffer std_logic;
+        VGA_VS : buffer std_logic;
+        VGA_R : buffer integer range 0 to 15;
+        VGA_G : buffer integer range 0 to 15;
+        VGA_B : buffer integer range 0 to 15;
 
-    SW : in std_logic_vector(9 downto 0);
-    HEX5 : out std_logic_vector(0 to 6);
-    HEX4 : out std_logic_vector(0 to 6);
-    HEX1 : out std_logic_vector(0 to 6);
-    HEX0 : out std_logic_vector(0 to 6)
-  ) ;
+        SW : in std_logic_vector(9 downto 0);
+        HEX5 : out std_logic_vector(0 to 6);
+        HEX4 : out std_logic_vector(0 to 6);
+        HEX1 : out std_logic_vector(0 to 6);
+        HEX0 : out std_logic_vector(0 to 6)
+    );
 end Pong ;
 
 architecture description of Pong is
@@ -32,8 +33,11 @@ architecture description of Pong is
     -- Position verticale des raquettes
 	signal lPalet : integer range 0 to 352 := 0; -- Raquette gauche
     signal rPalet : integer range 0 to 352 := 0; -- Droite
+    constant paletHeight : integer := 128;
+    constant paletWidth : integer := 16;
     alias lSW is SW(9); -- Alias pour le controle des raquettes gauche
     alias rSW is SW(0); -- et droite
+
     alias pause is SW(5);
 
     signal gameTick : std_logic; -- Horloge du timing du jeux
@@ -45,6 +49,7 @@ architecture description of Pong is
     -- Position de la balle (point le plus en haut à gauche de celle-ci)
     signal ball_x : integer range 0 to 639 := 20; -- Position en x (colonnes)
     signal ball_y : integer range 0 to 479 := 300; -- Position en y (lignes)
+    constant ballSize : integer := 16;
 
     signal lScore : integer range 0 to 10 := 0; -- Score du joueur gauche
     signal rScore : integer range 0 to 10 := 0; -- Score du joueur droit
@@ -76,13 +81,13 @@ begin
 
 	pixel_print : process( VGA_x, VGA_y ) -- Choisis d'afficher un pixel ou non
 	begin
-		if (VGA_x <= 16) and (VGA_y >= lPalet) and (VGA_y <= (lPalet + 128)) then -- Raquette 1
+		if (VGA_x <= paletWidth) and (VGA_y >= lPalet) and (VGA_y <= (lPalet + paletHeight)) then -- Raquette 1
             pixel <= '1';
-        elsif (VGA_x >= 639 - 16) and (VGA_y >= rPalet) and (VGA_y <= (rPalet + 128)) then -- Raquette 2
+        elsif (VGA_x >= 639 - paletWidth) and (VGA_y >= rPalet) and (VGA_y <= (rPalet + paletHeight)) then -- Raquette 2
             pixel <= '1';
-        elsif ((VGA_x >= ball_x) and (VGA_x <= (ball_x + 16)))
+        elsif ((VGA_x >= ball_x) and (VGA_x <= (ball_x + ballSize)))
                 and 
-            ((VGA_y >= ball_y) and (VGA_y <= (ball_y + 16))) -- Balle
+            ((VGA_y >= ball_y) and (VGA_y <= (ball_y + ballSize))) -- Balle
         then
             pixel <= '1';
         else
@@ -110,7 +115,7 @@ begin
                     lPalet <= lPalet - 1;
                 end if ;
             else
-                if lPalet < (480 - 128) then
+                if lPalet < (480 - paletHeight) then
                     lPalet <= lPalet + 1;
                 end if ;
             end if ;
@@ -120,7 +125,7 @@ begin
                     rPalet <= rPalet - 1;
                 end if ;
             else
-                if rPalet < (480 - 128) then
+                if rPalet < (480 - paletHeight) then
                     rPalet <= rPalet + 1;
                 end if ;
             end if ;
@@ -133,7 +138,7 @@ begin
             if gameStart = '1' then
                 if (ballDir = l_u) or (ballDir = l_d) then -- Direction vers la gauche
                     ball_x <= ball_x - 1;
-                    if ball_x <= 17 and (ball_y <= (lPalet + 128) and ball_y >= lPalet) then -- Touche la raquette
+                    if ball_x <= paletWidth + 1 and (ball_y <= (lPalet + paletHeight) and ball_y >= lPalet) then -- Touche la raquette
                         case( ballDir ) is
                             when l_d => ballDir <= r_d;
                             when l_u => ballDir <= r_u;
@@ -146,7 +151,7 @@ begin
                 end if ;
                 if (ballDir = r_u) or (ballDir = r_d) then -- Direction vers la droite
                     ball_x <= ball_x + 1;
-                    if (ball_x = (639 - 17 - 16)) and (ball_y <= (rPalet + 128) and ball_y >= rPalet) then -- Touche la raquette
+                    if (ball_x = (639 - paletWidth - 1 - ballSize)) and (ball_y <= (rPalet + paletHeight) and ball_y >= rPalet) then -- Touche la raquette
                         case( ballDir ) is
                             when r_d => ballDir <= l_d;
                             when r_u => ballDir <= l_u;
@@ -169,7 +174,7 @@ begin
                 end if ;
                 if (ballDir = l_d) or (ballDir = r_d) then -- Direction vers le bas
                     ball_y <= ball_y + 1;
-                    if ball_y = 480 - 16 then
+                    if ball_y = 480 - ballSize then
                         case( ballDir ) is
                             when r_d => ballDir <= r_u;
                             when l_d => ballDir <= l_u;
@@ -184,7 +189,7 @@ begin
                     rScore <= rScore + 1;
                     currentSpeed <= 250000;
                 end if ;
-                if ball_x = (639 - 16) then -- Si la balle arrive derrière la raquette droite
+                if ball_x = (639 - ballSize) then -- Si la balle arrive derrière la raquette droite
                     ballDir <= l_u;
                     ball_x <= 619;
                     ball_y <= 300;
