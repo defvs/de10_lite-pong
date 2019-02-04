@@ -54,7 +54,7 @@ architecture description of Pong is
     signal lScore : integer range 0 to 10 := 0; -- Score du joueur gauche
     signal rScore : integer range 0 to 10 := 0; -- Score du joueur droit
 
-    signal currentSpeed : integer range 0 to 250000 := 250000; -- Vitesse actuelle du jeu; accelère avec le temps si personne ne marque
+    signal currentSpeed : integer range 0 to 125000 := 125000; -- Vitesse actuelle du jeu; accelère avec le temps si personne ne marque
 
     signal gameStart : std_logic; -- Reset du jeu
 
@@ -187,14 +187,14 @@ begin
                     ball_x <= 20;
                     ball_y <= 300;
                     rScore <= rScore + 1;
-                    currentSpeed <= 250000;
+                    currentSpeed <= 125000;
                 end if ;
                 if ball_x = (639 - ballSize) then -- Si la balle arrive derrière la raquette droite
                     ballDir <= l_u;
                     ball_x <= 619;
                     ball_y <= 300;
                     lScore <= lScore + 1;
-                    currentSpeed <= 250000;
+                    currentSpeed <= 125000;
                 end if ;
                 if lScore = 10 or rScore = 10 then -- Si un des deux scores arrive à 10
                     gameStart <= '0';
@@ -229,7 +229,6 @@ begin
                 HEX4 <= not "1100010";
                 HEX1 <= not "0001000";
             when 0 =>
-                null;
         end case ;
         case( rScore ) is -- Score droit
             when 1 to 9 =>
@@ -239,7 +238,6 @@ begin
                 HEX1 <= not "1100010";
                 HEX4 <= not "0001000";
             when 0 =>
-                null;
         end case ;
     end process ; -- score_print
 

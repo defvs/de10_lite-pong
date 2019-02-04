@@ -77,7 +77,7 @@ begin
             end case ;
 
             case( vsync_counter ) is
-                when 30 to 518 => -- Dans la zone d'affichage
+                when 30 to 509 => -- Dans la zone d'affichage
 					V_VIDEO <= '1';
 					y <= vsync_counter - 30;
                 when others => -- Hors de la zone
