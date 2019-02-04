@@ -15,7 +15,7 @@ entity VGA is
     clk : in std_logic;
     HS : buffer std_logic;
     VS : out std_logic;
-    RGB_in : in unsigned(11 downto 0); -- RGB en hexa.
+    RGB_in : in integer range 0 to 4096; -- RGB en hexa.
     -- 4 bits = R / 4 bits = G / 4 bits = B
 
     R_out : out integer range 0 to 15;
@@ -96,9 +96,9 @@ begin
 					G_out <= 15;
 					B_out <= 15;
 				else -- Afficher la couleur donnée en hexa
-					R_out <= to_integer(RGB_in(11 downto 8));
-					G_out <= to_integer(RGB_in(7 downto 4));
-					B_out <= to_integer(RGB_in(3 downto 0));
+					R_out <= to_integer(to_unsigned(RGB_in,12)(11 downto 8));
+					G_out <= to_integer(to_unsigned(RGB_in,12)(7 downto 4));
+					B_out <= to_integer(to_unsigned(RGB_in,12)(3 downto 0));
 				end if ;
             else -- Ne rien afficher
                 R_out <= 0;

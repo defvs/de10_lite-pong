@@ -28,7 +28,8 @@ architecture description of Pong is
 
 	signal VGA_x : integer range 0 to 639; -- Axe x (colonnes)
 	signal VGA_y : integer range 0 to 479; -- Axe y (lignes)
-	signal pixel : std_logic; -- Si '1', affichera un pixel blanc à l'emplacement du curseur
+    signal pixel : std_logic; -- Si '1', affichera un pixel blanc à l'emplacement du curseur
+    signal color : integer range 0 to 4096;
 
     -- Position verticale des raquettes
 	signal lPalet : integer range 0 to 352 := 0; -- Raquette gauche
@@ -75,21 +76,23 @@ begin
             B_out => VGA_B, -- Signal bleu sortie
             x => VGA_x, -- Coordonnées X actuelles
             y => VGA_y, -- Coordonnées Y actuelles
-            RGB_in => to_unsigned(16#000#, 12),
+            RGB_in => color,
             pixel => pixel -- Signal forcé couleur blanche
     );
 
 	pixel_print : process( VGA_x, VGA_y ) -- Choisis d'afficher un pixel ou non
-	begin
+    begin
+        color <= 16#000#;
+        pixel <= '0';
 		if (VGA_x <= paletWidth) and (VGA_y >= lPalet) and (VGA_y <= (lPalet + paletHeight)) then -- Raquette 1
-            pixel <= '1';
+            color <= 16#4bf#;
         elsif (VGA_x >= 639 - paletWidth) and (VGA_y >= rPalet) and (VGA_y <= (rPalet + paletHeight)) then -- Raquette 2
-            pixel <= '1';
+            color <= 16#f44#;
         elsif ((VGA_x >= ball_x) and (VGA_x <= (ball_x + ballSize)))
                 and 
             ((VGA_y >= ball_y) and (VGA_y <= (ball_y + ballSize))) -- Balle
         then
-            pixel <= '1';
+            color <= 16#c3f#;
         else
             pixel <= '0';
 		end if ;
@@ -138,7 +141,8 @@ begin
             if gameStart = '1' then
                 if (ballDir = l_u) or (ballDir = l_d) then -- Direction vers la gauche
                     ball_x <= ball_x - 1;
-                    if ball_x <= paletWidth + 1 and (ball_y <= (lPalet + paletHeight) and ball_y >= lPalet) then -- Touche la raquette
+                    if ball_x <= paletWidth + 1 and ((ball_y <= (lPalet + paletHeight) and ball_y >= lPalet) 
+                        or (ball_y + ballSize <= (lPalet + paletHeight) and ball_y + ballSize >= lPalet)) then -- Touche la raquette
                         case( ballDir ) is
                             when l_d => ballDir <= r_d;
                             when l_u => ballDir <= r_u;
@@ -151,7 +155,8 @@ begin
                 end if ;
                 if (ballDir = r_u) or (ballDir = r_d) then -- Direction vers la droite
                     ball_x <= ball_x + 1;
-                    if (ball_x = (639 - paletWidth - 1 - ballSize)) and (ball_y <= (rPalet + paletHeight) and ball_y >= rPalet) then -- Touche la raquette
+                    if ball_x >= (639 - paletWidth - 1 - ballSize) and ((ball_y <= (rPalet + paletHeight) and ball_y >= rPalet) 
+                        or (ball_y + ballSize <= (rPalet + paletHeight) and ball_y + ballSize >= rPalet)) then -- Touche la raquette
                         case( ballDir ) is
                             when r_d => ballDir <= l_d;
                             when r_u => ballDir <= l_u;
