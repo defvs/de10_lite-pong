@@ -20,6 +20,12 @@ architecture work of Pong is
 	signal compteur_v: integer range 0 to 524;
 	signal video_h : std_logic;
 	signal video_v : std_logic;
+	constant size : integer := 32;
+	signal x : integer range 0 to 799;
+	signal y : integer range 0 to 524;
+	signal vitessX : integer range -1 to 1 :=1;
+	signal vitessY : integer range -1 to 1 :=1;
+	signal vitesse : std_logic;
 begin
 	
 	
@@ -70,21 +76,63 @@ begin
 		end if;
 	end process synchro_v;
 	
-	bande : process(compteur_h,compteur_v)
+	vite : process(VGA_VS)
+	begin 
+		if rising_edge(VGA_VS) then 
+			vitesse <= not vitesse;
+		end if;
+	end process vite;
+	
+	
+	bande : process(compteur_h,compteur_v,vitesse)
 	begin
-		if compteur_v <= 80 and compteur_v >=50 then
-			VGA_R <= 15;
-		else 
-			VGA_R <= 0;
+		if rising_edge(vitesse) then 
+			x <= x+vitessx;
+			y <= y+vitessy;
 		end if;
-		if compteur_v <= 400 and compteur_v >= 200 and compteur_h >= 400 and compteur_h <= 600 then
-			VGA_G <= 15;
+			
+		if video_h = '1' and video_v = '1' then 
+			
+			if compteur_v >= y and compteur_v <= y+size and compteur_h >= x and compteur_h <= x+size then
+				VGA_R <= 15;
+			else 
+				VGA_R <= 0;
+			end if;
 		else
-			VGA_G <=0;
+			VGA_R <= 0;
+			VGA_B <= 0;
+			VGA_G <= 0;
+		
 		end if;
+		
+	
+		
+		
+		
+		
+		
+		--if compteur_v <= 400 and compteur_v >= 200 and compteur_h >= 400 and compteur_h <= 600 then
+		--	VGA_G <= 15;
+		--else
+	--		VGA_G <=0;
+	--	end if;
 	end process bande;
 	
-	
+	test : process(x,y)
+	begin
+		if x = 683-size then 
+			vitessx <= -1;
+		end if ;
+		if x = 44 then
+			vitessx <= +1;
+		end if;
+		if y = 509-size then 
+			vitessy <= -1;
+		end if;
+		if y = 30 then
+			vitessy <=+1;
+		end if;
+	end process test;
 	
 	
 	
