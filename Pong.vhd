@@ -1,3 +1,16 @@
+-- DE10-LITE_Pong : Projet de Daniel Thirion, DUT GEII SALON DE PROVENCE, 2019
+-- Réalisation d'un Pong sur la carte DE10-Lite avec utilisation du port VGA
+-- Inclut un système de scores, des sons simples, et permet une customisation facile
+--
+-- 4 fichiers VHDL - Standard VHDL-2008, compilé sous Quartus Prime Lite 18.1
+--  Pong.vhd (top-level)
+--  |   seg7.vhd (7 segments)
+--  |   VGA.vhd (sortie vidéo VGA)
+--  |   sound.vhd (estion du son)
+--  |   |   lpm_divide (Fonction diviseur de Altera, automatique)
+--  |   \_
+--  \_
+
 library ieee ;
 	use ieee.std_logic_1164.all;
 	use ieee.numeric_std.all;
@@ -17,11 +30,38 @@ entity Pong is
         HEX5 : out std_logic_vector(0 to 6);
         HEX4 : out std_logic_vector(0 to 6);
         HEX1 : out std_logic_vector(0 to 6);
-        HEX0 : out std_logic_vector(0 to 6)
+        HEX0 : out std_logic_vector(0 to 6);
+
+        GPIO : out std_logic_vector(0 downto 0);
+        ARDUINO_IO : out std_logic_vector(2 downto 2)
     );
 end Pong ;
 
 architecture description of Pong is
+
+    -- Constantes des tailles du jeu, en pixels
+
+    constant ballSize : integer := 16; -- Taille de la balle
+    constant paletHeight : integer := 128; -- Hauteur des raquettes
+    constant paletWidth : integer := 16; -- Largeurs des raquettes
+
+    -- Constantes des couleurs du jeu
+    
+    -- La couleur est sous forme 16#fff# avec fff les valeurs ROUGE VERT BLEU
+    -- Astuce: utilisez Google (https://goo.gl/imyKPJ) ou tappez "Color Picker".
+    -- Choisissez une couleur, regardez le code hexadécimal, et recopiez le comme ca:
+    -- #12ab56
+    -- Deviendra :
+    -- 16#1a5# car on ne garde que le poids le plus fort pour chaque couleur.
+    -- 12 est condensé en 1 ; ab est condensé en a ; 56 est condensé en 5
+    -- Rouge 1 / Vert 10 (= a) / Bleu 5
+    constant ballColor : integer := 16#c3f#; -- Couleur de la balle
+    constant lPaletColor : integer := 16#4bf#; -- Couleur de la raquette gauche
+    constant rPaletColor : integer := 16#f44#; -- droite
+    constant backgroundColor : integer := 16#fff#; -- Couleur de fond
+
+
+
     alias clk is MAX10_CLK1_50; -- Alias horlong 50meg
 
     signal VGA_clk : std_logic; -- Horloge du fonctionnement VGA environ 25MHz
@@ -29,17 +69,15 @@ architecture description of Pong is
 	signal VGA_x : integer range 0 to 639; -- Axe x (colonnes)
 	signal VGA_y : integer range 0 to 479; -- Axe y (lignes)
     signal pixel : std_logic; -- Si '1', affichera un pixel blanc à l'emplacement du curseur
-    signal color : integer range 0 to 4096;
+    signal color : integer range 0 to 4096; -- Couleur en héxadécimal
 
     -- Position verticale des raquettes
 	signal lPalet : integer range 0 to 352 := 0; -- Raquette gauche
     signal rPalet : integer range 0 to 352 := 0; -- Droite
-    constant paletHeight : integer := 128;
-    constant paletWidth : integer := 16;
     alias lSW is SW(9); -- Alias pour le controle des raquettes gauche
     alias rSW is SW(0); -- et droite
 
-    alias pause is SW(5);
+    alias pause is SW(5); -- Switch n.5 = Pause du jeu
 
     signal gameTick : std_logic; -- Horloge du timing du jeux
     signal tickCounter : integer range 0 to 250000; -- Diviseur pour l'horloge du jeu, 100Hz
@@ -50,14 +88,20 @@ architecture description of Pong is
     -- Position de la balle (point le plus en haut à gauche de celle-ci)
     signal ball_x : integer range 0 to 639 := 20; -- Position en x (colonnes)
     signal ball_y : integer range 0 to 479 := 300; -- Position en y (lignes)
-    constant ballSize : integer := 16;
-
     signal lScore : integer range 0 to 10 := 0; -- Score du joueur gauche
     signal rScore : integer range 0 to 10 := 0; -- Score du joueur droit
 
     signal currentSpeed : integer range 0 to 125000 := 125000; -- Vitesse actuelle du jeu; accelère avec le temps si personne ne marque
 
     signal gameStart : std_logic; -- Reset du jeu
+
+    -- Variables pour le traitement du son
+    signal playSound : std_logic;
+    signal frequency : integer range 0 to 1000;
+    signal duration : integer range 0 to 1000;
+    signal oldDir : direction;
+    signal oldlScore : integer range 0 to 10;
+    signal oldrScore : integer range 0 to 10;
 
 begin
     VGA_Divider : process( clk ) -- 25MHz pour le VGA
@@ -80,21 +124,21 @@ begin
             pixel => pixel -- Signal forcé couleur blanche
     );
 
+    
+
 	pixel_print : process( VGA_x, VGA_y ) -- Choisis d'afficher un pixel ou non
     begin
-        color <= 16#000#;
+        color <= backgroundColor;
         pixel <= '0';
 		if (VGA_x <= paletWidth) and (VGA_y >= lPalet) and (VGA_y <= (lPalet + paletHeight)) then -- Raquette 1
-            color <= 16#4bf#;
+            color <= lPaletColor;
         elsif (VGA_x >= 639 - paletWidth) and (VGA_y >= rPalet) and (VGA_y <= (rPalet + paletHeight)) then -- Raquette 2
-            color <= 16#f44#;
+            color <= rPaletColor;
         elsif ((VGA_x >= ball_x) and (VGA_x <= (ball_x + ballSize)))
                 and 
             ((VGA_y >= ball_y) and (VGA_y <= (ball_y + ballSize))) -- Balle
         then
-            color <= 16#c3f#;
-        else
-            pixel <= '0';
+            color <= ballColor;
 		end if ;
     end process ; -- pixel_print
     
@@ -247,4 +291,34 @@ begin
     end process ; -- score_print
 
 
-end architecture ; -- work
+    soundLib_sub : entity work.soundLib port map( -- Entitée pour le son
+        clk, -- Horloge 50MHz
+        frequency, -- Fréquence voulue
+        duration, -- Durée voulue
+        playSound, -- Front montant pour jouer
+        ARDUINO_IO(2) -- Sortie vers le haut parleur
+    );
+
+    sound_trigger : process( clk ) --   Process pour le son. On est obligé de le faire en synchronisé sur l'horloge
+    begin                          --   car on doit reset playSound au prochain front de 50Mhz
+        if rising_edge(clk) then
+            playSound <= '0';
+            if oldDir /= ballDir then -- Changement de direction de la balle
+                frequency <= 900;
+                duration <= 100;
+                playSound <= '1';
+            end if;
+            if oldlScore /= lScore or oldrScore /= rScore then --   Changement de score. 
+                                                            --      Priorité par rapport au changement de direction
+                frequency <= 500;
+                duration <= 500;
+                playSound <= '1';
+            end if;
+            oldDir <= ballDir; -- Variables buffer pour vérifier si la direction ou les scores ont changés
+            oldlScore <= lScore; -- Sans devoir les mettres dans le process
+            oldrScore <= rScore; -- Car c'est clk qui dirige le process.
+        end if ;
+    end process ; -- sound_trigger
+
+
+end description ; -- work

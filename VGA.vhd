@@ -1,8 +1,9 @@
+-- DE10-LITE_Pong : Projet de Daniel Thirion, DUT GEII SALON DE PROVENCE, 2019
 library ieee ;
 	use ieee.std_logic_1164.all;
     use ieee.numeric_std.all;
 
--- Librairie qui vise à faciliter l'utilisation d'un écran VGA
+-- Entitée qui vise à faciliter l'utilisation d'un écran VGA
 -- Usage :
 --  * clk INPUT => Horloge de 25Mhz
 --  * HS / VS OUTPUT => A rediriger vers le VGA, synchronisation

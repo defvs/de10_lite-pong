@@ -1,6 +1,14 @@
+-- DE10-LITE_Pong : Projet de Daniel Thirion, DUT GEII SALON DE PROVENCE, 2019
 library ieee ;
 	use ieee.std_logic_1164.all;
     use ieee.numeric_std.all;
+
+-- Entitée permettant l'affichage rapide sur le(s) 7 segments de la carte DE10-Lite
+-- Chaque segment est indépendant.
+-- 
+-- Signaux :
+--  * seg[5..0] : Entier de 0 à 9 qui sera affiché sur l'afficheur correspondant. Si entre 10 et 15, ne rien afficher.
+--  * HEX[5..0] : Sorties vers les afficheurs, à mapper.
 
 entity seg7 is
   port (
