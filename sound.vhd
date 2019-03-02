@@ -26,7 +26,7 @@ entity sound is
   ) ;
 end sound ;
 
-architecture arch of soundLib is
+architecture arch of sound is
     signal startTime : integer range 0 to 10000000;
     signal endTime : integer range 0 to 10000000;
 
