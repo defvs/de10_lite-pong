@@ -291,7 +291,7 @@ begin
     end process ; -- score_print
 
 
-    soundLib_sub : entity work.soundLib port map( -- Entitée pour le son
+    soundLib_sub : entity work.sound port map( -- Entitée pour le son
         clk, -- Horloge 50MHz
         frequency, -- Fréquence voulue
         duration, -- Durée voulue
