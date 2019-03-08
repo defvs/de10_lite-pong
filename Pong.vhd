@@ -102,7 +102,7 @@ begin
 	end process vite;
 	
 	
-	balle : process(compteur_h,compteur_v,vitesse,SW)
+	mouvements : process(compteur_h,compteur_v,vitesse,SW)
 	begin
 		if rising_edge(vitesse) then 
 			x <= x+vitessx;
@@ -128,9 +128,6 @@ begin
 				end if;
 			end if;
 			
-			
-		
-		
 			if x = 683-size-largeurac then 
 				if y >= yracd and y <= yracd+longueurac then
 					vitessx <= -1;
@@ -161,9 +158,6 @@ begin
 	
 			
 		if video_h = '1' and video_v = '1' then 
-			
-			
-			
 			if SW(3) = '1' then
 				VGA_R <= 15;
 			else 
@@ -180,9 +174,6 @@ begin
 				VGA_G <= 0;
 			end if;
 	
-			
-			
-			
 			if compteur_v >= y and compteur_v <= y+size and compteur_h >= x and compteur_h <= x+size then
 				VGA_R <= 15;
 				VGA_G <= 0;
@@ -190,94 +181,24 @@ begin
 		
 			end if;
 			
-			
 			if compteur_v >= yracg and compteur_v <= yracg+longueurac and compteur_h <= largeurac+44 then
 				VGA_R <= 1;
 				VGA_G <= 11;
 				VGA_B <= 6;
 		
 			end if;
-			
-			
-			
-			
+
 			if compteur_v >= yracd and compteur_v <= yracd+longueurac and compteur_h >= 683-largeurac and compteur_h <= 683 then
 				VGA_R <= 0;
 				VGA_G <= 6;
 				VGA_B <= 7;
-		
 			end if;
-			
-			
-			
-		
 		else
 			VGA_R <= 0;
-			
-			
 			VGA_B <= 0;
-			
 			VGA_G <= 0;
-		
 		end if;
-		
-		
-		--if compteur_v <= 400 and compteur_v >= 200 and compteur_h >= 400 and compteur_h <= 600 then
-		--	VGA_G <= 15;
-		--else
-	--		VGA_G <=0;
-	--	end if;
-	end process balle;
-	
-	--test : process(x,y)
-	--begin
-	
-		
-		
-		
-		
-		
-		
-	--end process test;
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
---	golli : process(SW)
---	begin
---		if video_h = '1' and video_v = '1' then 
---			if SW(1) = '1' then
---				VGA_B <= 15;
---			else 
---				VGA_B <= 0;
---			end if;
---			if SW(2) = '1' then
---				VGA_G <= 15;
---			else 
---				VGA_G <= 0;
---			end if;
---		else 
---			VGA_B <= 0;
---			VGA_G <= 0;
---		end if;
---	end process golli;
+	end process mouvements;
 
 	GPIO(0) <= VGA_HS;
 	GPIO(1) <= VGA_VS;
